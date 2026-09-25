@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluación Auxiliares | Integral de Empaques SAS</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+    .tabs { display: flex; background: #1F4E79; position: sticky; top: 0; z-index: 10; }
+    .tab { flex: 1; padding: 14px; color: #a8d0f0; font-size: 13px; font-weight: bold; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab.on { color: #fff; border-bottom: 3px solid #2E7D32; }
+    .pag { display: none; padding: 1rem; max-width: 520px; margin: 0 auto; }
+    .pag.on { display: block; }
+    #pag-evaluador { max-width: 1000px; }
+    .hdr { background: #1F4E79; border-radius: 14px; padding: 1.4rem; text-align: center; margin: 1rem 0; color: #fff; }
+    .hdr .emp { font-size: 12px; color: #D6E4F0; margin-bottom: 4px; }
+    .hdr h1 { font-size: 19px; line-height: 1.2; margin-bottom: 4px; }
+    .hdr .sub { font-size: 12px; color: #D6E4F0; }
+    .card { background: #fff; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    label { font-weight: bold; font-size: 13px; color: #1F4E79; display: block; margin-bottom: 6px; }
+    input, select { width: 100%; padding: 10px 12px; border: 2px solid #D6E4F0; border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 1rem; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 4px; }
+    .btn-v { background: #1A6B2F; color: #fff; }
+    .btn-v:disabled { background: #ccc; color: #888; cursor: default; }
+    .btn-a { background: #1F4E79; color: #fff; }
+    .btn-n { background: #C55A11; color: #fff; }
+    .prog-bg { background: #ddd; border-radius: 99px; height: 8px; margin-bottom: 1rem; }
+    .prog-fill { background: #1A6B2F; border-radius: 99px; height: 8px; transition: width .4s; }
+    .q-top { background: #1F4E79; border-radius: 12px; padding: .8rem 1.2rem; margin-bottom: .8rem; display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 13px; font-weight: bold; }
+    .q-card { background: #fff; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .q-txt { font-size: 15px; font-weight: bold; color: #1a1a1a; line-height: 1.5; }
+    .ops { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
+    .op { background: #fff; border: 2px solid #ddd; border-radius: 10px; padding: .9rem 1rem; text-align: left; font-size: 14px; color: #1a1a1a; cursor: pointer; display: flex; align-items: flex-start; gap: .6rem; line-height: 1.4; transition: all .2s; width: 100%; }
+    .op.sel { background: #D6E4F0; border-color: #2E75B6; }
+    .op.ok { background: #C8E6C9; border-color: #1A6B2F; color: #1A6B2F; font-weight: bold; }
+    .op.mal { background: #FDECEA; border-color: #C00000; color: #C00000; }
+    .letra { min-width: 24px; height: 24px; border-radius: 50%; background: #ddd; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; }
+    .op.sel .letra { background: #2E75B6; }
+    .op.ok .letra { background: #1A6B2F; }
+    .op.mal .letra { background: #C00000; }
+    .expl { border-radius: 10px; padding: 1rem; margin-bottom: 1rem; font-size: 13px; line-height: 1.5; border: 2px solid; }
+    .expl.ok { background: #C8E6C9; border-color: #1A6B2F; }
+    .expl.mal { background: #FDECEA; border-color: #C00000; }
+    .res-box { border-radius: 14px; padding: 1.5rem; text-align: center; margin: 1rem 0; color: #fff; }
+    .stats { display: flex; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .stat { background: #fff; border-radius: 10px; padding: .8rem 1.2rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.07); min-width: 85px; }
+    .stat .n { font-size: 28px; font-weight: bold; }
+    .stat .l { font-size: 11px; color: #888; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .alumno { background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); border-left: 5px solid #ddd; }
+    .nom { font-weight: bold; font-size: 14px; color: #1F4E79; }
+    .tur { font-size: 11px; color: #888; margin-bottom: 8px; }
+    .est { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+    .mini-bg { background: #eee; border-radius: 99px; height: 6px; margin-bottom: 8px; }
+    .mini-fill { background: #2E75B6; border-radius: 99px; height: 6px; transition: width .4s; }
+    .puntos { display: flex; gap: 4px; flex-wrap: wrap; }
+    .pto { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; }
+    .btn-rojo { background: #C00000; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .vacio { text-align: center; color: #aaa; padding: 3rem 1rem; background: #fff; border-radius: 12px; }
+    #estado-conexion, #estado-conexion-panel { text-align: center; padding: 8px; margin: 1rem 0; border-radius: 8px; font-size: 13px; font-weight: bold; }
+    .conectado { background: #C8E6C9; color: #1A6B2F; }
+    .desconectado { background: #FDECEA; color: #C00000; }
+    .lista-conectados { background: #C8E6C9; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border-left: 5px solid #1A6B2F; }
+    .lista-conectados h3 { font-size: 14px; color: #1A6B2F; margin-bottom: .8rem; }
+    .conectado-item { background: #fff; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; font-weight: bold; color: #1A6B2F; display: flex; align-items: center; gap: 6px; }
+    .punto-verde { width: 8px; height: 8px; background: #1A6B2F; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .seccion-evaluando { background: #FFF9E6; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border-left: 5px solid #C55A11; }
+    .seccion-evaluando h3 { font-size: 14px; color: #C55A11; margin-bottom: .8rem; }
+    .eval-vivo { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: .8rem; border: 2px solid #FFE0B2; }
+    .eval-vivo-nom { font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
+    .eval-vivo-prog { font-size: 11px; color: #888; margin-bottom: 6px; }
+    .eval-vivo-resp { display: flex; gap: 4px; flex-wrap: wrap; }
+    .eval-resp-pto { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #fff; }
+    textarea { width: 100%; padding: 10px 12px; border: 2px solid #D6E4F0; border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 1rem; font-family: Arial,sans-serif; resize: vertical; }
+    .contador-preg { background: #1F4E79; color: #fff; border-radius: 8px; padding: .7rem 1rem; font-size: 13px; font-weight: bold; margin-bottom: 1rem; text-align: center; }
+    .contador-preg.listo { background: #1A6B2F; }
+    .preg-item { background: #fff; border-radius: 10px; padding: .8rem 1rem; margin-bottom: .6rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; justify-content: space-between; align-items: center; }
+    .preg-item .txt { flex: 1; font-size: 13px; color: #1a1a1a; }
+    .btn-borrar { background: #C00000; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <button class="tab on" data-pag="form">📝 EVALUACIÓN</button>
+    <button class="tab" data-pag="evaluador">📊 PANEL</button>
+    <button class="tab" data-pag="preguntas">✏️ PREGUNTAS</button>
+  </div>
+
+  <!-- PESTAÑA 1: EVALUACIÓN -->
+  <div id="pag-form" class="pag on">
+    <div class="hdr">
+      <div class="emp">Integral de Empaques SAS</div>
+      <h1>Evaluación Auxiliares</h1>
+      <div class="sub">Área de Impresión Flexográfica</div>
+    </div>
+    <div id="estado-conexion"></div>
+
+    <div id="sec-datos" class="card">
+      <label>Nombre del Auxiliar o Patinador:</label>
+      <input type="text" id="inp-nom" placeholder="Escribe tu nombre completo">
+      <label>Turno:</label>
+      <select id="inp-tur">
+        <option value="">-- Selecciona turno --</option>
+        <option value="Turno 1">Turno 1 (6:00 - 14:00)</option>
+        <option value="Turno 2">Turno 2 (14:00 - 22:00)</option>
+        <option value="Turno 3">Turno 3 (22:00 - 6:00)</option>
+      </select>
+      <button class="btn btn-v" id="btn-iniciar">INICIAR EVALUACIÓN</button>
+    </div>
+
+    <div id="sec-eval" style="display:none;">
+      <div class="q-top">
+        <span id="prog-txt">P1/8</span>
+        <button class="btn-rojo" id="btn-terminar">Terminar Evaluación</button>
+      </div>
+      <div class="prog-bg"><div id="prog-fill" class="prog-fill" style="width:12.5%"></div></div>
+      <div id="contenedor-preguntas"></div>
+    </div>
+
+    <div id="sec-resultado" style="display:none;">
+      <div class="hdr">
+        <div class="emp">Evaluación Completada</div>
+        <h1 id="res-titulo"></h1>
+      </div>
+      <div id="res-stats"></div>
+      <div id="res-detalles"></div>
+      <button class="btn btn-a" id="btn-nuevaeval">REALIZAR NUEVA EVALUACIÓN</button>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 2: PANEL EVALUADOR -->
+  <div id="pag-evaluador" class="pag">
+    <div class="hdr">
+      <div class="emp">PANEL DEL EVALUADOR</div>
+      <h1>Seguimiento en Vivo</h1>
+    </div>
+    <div id="estado-conexion-panel"></div>
+
+    <!-- SECCIÓN: EVALUANDO AHORA -->
+    <div id="seccion-evaluando" style="display:none;">
+      <div class="seccion-evaluando">
+        <h3>⏳ Evaluando Ahora</h3>
+        <div id="lista-evaluando"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: CONECTADOS -->
+    <div id="seccion-conectados" style="display:none;">
+      <div class="lista-conectados">
+        <h3>👥 Conectados (no han empezado)</h3>
+        <div id="lista-conectados"></div>
+      </div>
+    </div>
+
+    <!-- ESTADÍSTICAS -->
+    <div class="stats">
+      <div class="stat">
+        <div class="n" id="cnt-total">0</div>
+        <div class="l">Total Completadas</div>
+      </div>
+      <div class="stat">
+        <div class="n" id="cnt-aprobados">0</div>
+        <div class="l">Aprobadas</div>
+      </div>
+      <div class="stat">
+        <div class="n" id="cnt-reprobados">0</div>
+        <div class="l">Reprobadas</div>
+      </div>
+    </div>
+
+    <!-- EVALUACIONES COMPLETADAS -->
+    <h3 style="color: #1F4E79; margin: 1.5rem 0 1rem 0; text-align: center;">✅ Evaluaciones Completadas</h3>
+    <div id="contenedor-alumnos"></div>
+  </div>
+
+  <!-- PESTAÑA 3: PREGUNTAS -->
+  <div id="pag-preguntas" class="pag">
+    <div class="hdr">
+      <div class="emp">GESTIÓN DE PREGUNTAS</div>
+      <h1>Crear/Editar Preguntas</h1>
+    </div>
+    <div id="estado-conexion-preg"></div>
+
+    <div class="card">
+      <div class="contador-preg" id="contador-preg">0 / 60 preguntas</div>
+      <label>Pregunta:</label>
+      <textarea id="txt-preg" placeholder="Escribe la pregunta..."></textarea>
+
+      <label>Opción A:</label>
+      <input type="text" id="opt-a" placeholder="Opción A">
+
+      <label>Opción B:</label>
+      <input type="text" id="opt-b" placeholder="Opción B">
+
+      <label>Opción C:</label>
+      <input type="text" id="opt-c" placeholder="Opción C">
+
+      <label>Opción D:</label>
+      <input type="text" id="opt-d" placeholder="Opción D">
+
+      <label>Respuesta Correcta:</label>
+      <select id="sel-correcta">
+        <option value="">-- Selecciona --</option>
+        <option value="0">A</option>
+        <option value="1">B</option>
+        <option value="2">C</option>
+        <option value="3">D</option>
+      </select>
+
+      <label>Explicación (opcional):</label>
+      <textarea id="txt-expl" placeholder="Explica por qué es correcta..."></textarea>
+
+      <button class="btn btn-v" id="btn-agregar-preg">AGREGAR PREGUNTA</button>
+    </div>
+
+    <div id="lista-preguntas"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://evaluacion-impresion-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const refAlumnos = db.ref("evaluaciones");
+    const refPreguntas = db.ref("preguntas");
+    const refConectados = db.ref("conectados");
+    const refEvaluando = db.ref("evaluando-ahora");
+
+    db.ref(".info/connected").on("value", snap => {
+      const actualizar = () => {
+        const el1 = document.getElementById("estado-conexion");
+        const el2 = document.getElementById("estado-conexion-panel");
+        const el3 = document.getElementById("estado-conexion-preg");
+        const msg = snap.val() ? "✅ Conectado en tiempo real" : "❌ Sin conexión";
+        const cls = snap.val() ? "conectado" : "desconectado";
+        [el1, el2, el3].forEach(el => {
+          if (el) {
+            el.className = cls;
+            el.textContent = msg;
+          }
+        });
+      };
+      actualizar();
+    });
+
+    const E = {
+      sessionId: null,
+      enEval: false,
+      pregActual: 0,
+      respuestas: [],
+      preguntas: [],
+      nombre: "",
+      turno: ""
+    };
+
+    function genId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    function mostrarTab(nombre) {
+      document.querySelectorAll(".pag").forEach(p => p.classList.remove("on"));
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("on"));
+      const pag = document.getElementById(`pag-${nombre}`);
+      if (pag) pag.classList.add("on");
+      document.querySelector(`[data-pag="${nombre}"]`)?.classList.add("on");
+    }
+
+    function actualizarPresencia() {
+      const nom = document.getElementById('inp-nom').value.trim();
+      const tur = document.getElementById('inp-tur').value;
+      if (nom && tur && E.sessionId) {
+        refConectados.child(E.sessionId).set({
+          nombre: nom,
+          turno: tur,
+          timestamp: firebase.database.ServerValue.TIMESTAMP,
+          estado: 'en-formulario'
+        });
+      }
+    }
+
+    function limpiarPresencia() {
+      if (E.sessionId) {
+        refConectados.child(E.sessionId).remove();
+        refEvaluando.child(E.sessionId).remove();
+      }
+    }
+
+    // Monitor de conectados
+    refConectados.on('value', snap => {
+      const conectados = snap.val() || {};
+      const ahora = Date.now();
+      const TIMEOUT = 15000;
+      const activos = Object.entries(conectados)
+        .filter(([_, data]) => data && (ahora - (data.timestamp || 0)) < TIMEOUT)
+        .map(([id, data]) => ({ id, ...data }));
+
+      if (activos.length > 0) {
+        document.getElementById('seccion-conectados').style.display = 'block';
+        const lista = document.getElementById('lista-conectados');
+        lista.innerHTML = activos.map(c => `
+          <div class="conectado-item">
+            <div class="punto-verde"></div>
+            <span>${c.nombre} - ${c.turno}</span>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('seccion-conectados').style.display = 'none';
+      }
+    });
+
+    // Monitor de evaluando ahora
+    refEvaluando.on('value', snap => {
+      const evaluando = snap.val() || {};
+      const ahora = Date.now();
+      const activos = Object.entries(evaluando)
+        .filter(([_, data]) => data)
+        .map(([id, data]) => ({ id, ...data }));
+
+      if (activos.length > 0) {
+        document.getElementById('seccion-evaluando').style.display = 'block';
+        const lista = document.getElementById('lista-evaluando');
+        lista.innerHTML = activos.map(e => {
+          const respuestasHtml = (e.respuestas || []).map((r, i) => {
+            const preg = E.preguntas[i];
+            const esCorrecta = preg && r === preg.c;
+            return `<span class="eval-resp-pto" style="background: ${esCorrecta ? '#1A6B2F' : (r === -1 ? '#ddd' : '#C55A11')};">${i+1}</span>`;
+          }).join('');
+
+          return `
+            <div class="eval-vivo">
+              <div class="eval-vivo-nom">👤 ${e.nombre} - ${e.turno}</div>
+              <div class="eval-vivo-prog">📍 Pregunta ${(e.pregActual || 0) + 1} de 8</div>
+              <div class="eval-vivo-resp">${respuestasHtml}</div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        document.getElementById('seccion-evaluando').style.display = 'none';
+      }
+    });
+
+    const PREGUNTAS_DEFECTO = [
+      {t:"El sustrato (rollo de material) de la máquina está a punto de agotarse. ¿Cuándo debes traer el nuevo rollo?",o:["Cuando el operario te llame porque ya se acabó.","Antes de que se agote, anticipándote al momento en que la máquina lo va a necesitar.","Al inicio del siguiente turno.","Cuando el Jefe de Área te lo indique."],c:1,e:"La clave es ANTICIPARSE. Cuando la máquina ya paró porque se acabó el material, ya perdiste tiempo productivo."},
+      {t:"Terminas una referencia y debes devolver la tinta al almacén. ¿Cómo la debes entregar?",o:["Como está, para que el almacenista la revise.","En cualquier envase disponible que encuentres en el área.","Tapada y etiquetada con la referencia, el estado (usada/limpia/contaminada) y el turno.","Mezclada con los restos de otras tintas del mismo color."],c:2,e:"El protocolo es: TAPADA + ETIQUETADA (referencia, estado, turno)."},
+      {t:"Estás retirando sacos impresos y notas que varios tienen manchas evidentes. ¿Qué haces?",o:["Los retiras como están, es responsabilidad del control de calidad revisarlos después.","Paras la máquina inmediatamente.","Avisas al operario o jefe de turno para investigar la causa.","Los vuelves a meter a la máquina para repasarlos."],c:2,e:"AVISAR al operario/jefe es lo correcto. Ellos pueden determinar si es un defecto de tela o de impresión."},
+      {t:"¿Cuál es la temperatura ideal de la tinta para imprimir?",o:["Entre 15 y 20°C","Entre 20 y 25°C","Entre 25 y 30°C","No importa, la temperatura no afecta"],c:1,e:"La viscosidad de la tinta depende de la temperatura. Entre 20-25°C se obtiene la mejor consistencia."},
+      {t:"Una máquina comienza a hacer un ruido extraño durante la impresión. ¿Qué debes hacer?",o:["Seguir trabajando, es normal","Aumentar la velocidad para terminar más rápido","Alertar al operario inmediatamente","Intentar repararla tú mismo"],c:2,e:"Los ruidos anormales pueden indicar desgaste. AVISA inmediatamente para evitar daños mayores."},
+      {t:"¿Cuál es la función principal del anilox en la máquina flexográfica?",o:["Sujetar el cilindro de impresión","Transferir una cantidad uniforme de tinta al cliché","Calentar la tinta","Controlar la velocidad de impresión"],c:1,e:"El anilox transfiere tinta uniformemente al cliché. Es crítico para la calidad."},
+      {t:"Encuentras un lote de tinta que se ve separada (aceite encima). ¿Qué haces?",o:["La usas normalmente, es reversible","La mezclas bien y la usas","La reportas como contaminada y no la usas","La botas sin avisar"],c:1,e:"Si la separación es leve, mezclándola bien se recupera. Pero si es severa, debe reportarse."},
+      {t:"¿Qué significa cuando el cliché comienza a perder nitidez en los detalles?",o:["La tinta está muy caliente","El anilox está sucio o desgastado","La máquina necesita mantenimiento preventivo","El cilindro de presión está mal calibrado"],c:1,e:"Un anilox sucio o desgastado no transfiere tinta uniformemente, causando pérdida de detalles."}
+    ];
+
+    function cargarPreguntas() {
+      refPreguntas.once("value", snap => {
+        const data = snap.val();
+        if (data && Object.keys(data).length > 0) {
+          E.preguntas = Object.values(data);
+        } else {
+          E.preguntas = PREGUNTAS_DEFECTO;
+        }
+      });
+    }
+
+    cargarPreguntas();
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        mostrarTab(tab.dataset.pag);
+      });
+    });
+
+    window.addEventListener("load", () => {
+      E.sessionId = genId();
+      document.getElementById("inp-nom").addEventListener("input", actualizarPresencia);
+      document.getElementById("inp-tur").addEventListener("change", actualizarPresencia);
+    });
+
+    document.getElementById("btn-iniciar").addEventListener("click", () => {
+      const nom = document.getElementById("inp-nom").value.trim();
+      const tur = document.getElementById("inp-tur").value;
+      if (!nom || !tur) {
+        alert("Por favor completa nombre y turno");
+        return;
+      }
+      E.nombre = nom;
+      E.turno = tur;
+      E.enEval = true;
+      E.pregActual = 0;
+      E.respuestas = new Array(8).fill(-1);
+
+      document.getElementById("sec-datos").style.display = "none";
+      document.getElementById("sec-eval").style.display = "block";
+
+      refConectados.child(E.sessionId).set({
+        nombre: nom,
+        turno: tur,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        estado: 'evaluando'
+      });
+
+      refEvaluando.child(E.sessionId).set({
+        nombre: nom,
+        turno: tur,
+        pregActual: 0,
+        respuestas: []
+      });
+
+      mostrarPregunta();
+    });
+
+    function mostrarPregunta() {
+      if (E.pregActual >= E.preguntas.length || E.pregActual >= 8) {
+        finalizarEvaluacion();
+        return;
+      }
+
+      const preg = E.preguntas[E.pregActual];
+      const prog = Math.round(((E.pregActual + 1) / 8) * 100);
+      document.getElementById("prog-txt").textContent = `P${E.pregActual + 1}/8`;
+      document.getElementById("prog-fill").style.width = prog + "%";
+
+      let html = `<div class="q-card"><div class="q-txt">${preg.t}</div><div class="ops">`;
+      preg.o.forEach((op, i) => {
+        const letra = String.fromCharCode(65 + i);
+        html += `<button class="op" onclick="seleccionarOpcion(${i}, '${letra}')"><span class="letra">${letra}</span><span>${op}</span></button>`;
+      });
+      html += `</div></div>`;
+
+      document.getElementById("contenedor-preguntas").innerHTML = html;
+    }
+
+    window.seleccionarOpcion = function(idx, letra) {
+      E.respuestas[E.pregActual] = idx;
+
+      // Actualizar en tiempo real en Firebase
+      refEvaluando.child(E.sessionId).update({
+        pregActual: E.pregActual,
+        respuestas: E.respuestas
+      });
+
+      E.pregActual++;
+      setTimeout(mostrarPregunta, 300);
+    };
+
+    document.getElementById("btn-terminar").addEventListener("click", () => {
+      if (confirm("¿Terminar la evaluación?")) {
+        finalizarEvaluacion();
+      }
+    });
+
+    function finalizarEvaluacion() {
+      E.enEval = false;
+      const total = 8;
+      let correctas = 0;
+      const detalles = [];
+
+      for (let i = 0; i < total; i++) {
+        const preg = E.preguntas[i];
+        const esCorrecta = E.respuestas[i] === preg.c;
+        if (esCorrecta) correctas++;
+        detalles.push({ preg: preg.t, esCorrecta, expl: preg.e });
+      }
+
+      const puntaje = Math.round((correctas / total) * 100);
+      const aprobado = puntaje >= 75;
+
+      refAlumnos.push({
+        nombre: E.nombre,
+        turno: E.turno,
+        puntaje,
+        correctas,
+        total,
+        aprobado,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        detalles
+      });
+
+      limpiarPresencia();
+
+      document.getElementById("sec-eval").style.display = "none";
+      document.getElementById("sec-resultado").style.display = "block";
+      document.getElementById("res-titulo").textContent = aprobado ? "¡APROBADO!" : "REPROBADO";
+      document.getElementById("res-titulo").parentElement.style.background = aprobado ? "#1A6B2F" : "#C00000";
+
+      document.getElementById("res-stats").innerHTML = `
+        <div class="stats">
+          <div class="stat">
+            <div class="n">${puntaje}%</div>
+            <div class="l">Calificación</div>
+          </div>
+          <div class="stat">
+            <div class="n">${correctas}/${total}</div>
+            <div class="l">Respuestas Correctas</div>
+          </div>
+        </div>
+      `;
+
+      let detHtml = "";
+      detalles.forEach((d, i) => {
+        detHtml += `
+          <div class="det-item" style="background: ${d.esCorrecta ? '#C8E6C9' : '#FDECEA'}; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <div>
+              <div style="font-weight: bold; color: #1a1a1a; margin-bottom: 4px;">P${i+1}: ${d.esCorrecta ? '✓ Correcta' : '✗ Incorrecta'}</div>
+              <div style="font-size: 12px; color: #555;">${d.expl}</div>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById("res-detalles").innerHTML = detHtml;
+    }
+
+    document.getElementById("btn-nuevaeval").addEventListener("click", () => {
+      E.enEval = false;
+      document.getElementById("sec-resultado").style.display = "none";
+      document.getElementById("sec-datos").style.display = "block";
+      document.getElementById("inp-nom").value = "";
+      document.getElementById("inp-tur").value = "";
+      mostrarTab("form");
+    });
+
+    // PANEL EVALUADOR
+    refAlumnos.on("value", snap => {
+      const datos = snap.val() || {};
+      const evaluaciones = Object.values(datos);
+
+      let aprobados = 0, reprobados = 0;
+      evaluaciones.forEach(e => {
+        if (e.aprobado) aprobados++;
+        else reprobados++;
+      });
+
+      document.getElementById("cnt-total").textContent = evaluaciones.length;
+      document.getElementById("cnt-aprobados").textContent = aprobados;
+      document.getElementById("cnt-reprobados").textContent = reprobados;
+
+      let html = "";
+      if (evaluaciones.length === 0) {
+        html = '<div class="vacio">Esperando evaluaciones...</div>';
+      } else {
+        html = '<div class="grid">';
+        evaluaciones.forEach(e => {
+          const color = e.aprobado ? "#1A6B2F" : "#C00000";
+          const estado = e.aprobado ? "✓ APROBADO" : "✗ REPROBADO";
+          html += `
+            <div class="alumno" style="border-left-color: ${color}">
+              <div class="nom">${e.nombre}</div>
+              <div class="tur">${e.turno}</div>
+              <div class="est" style="color: ${color}">${estado} - ${e.puntaje}%</div>
+              <div class="mini-bg"><div class="mini-fill" style="width: ${e.puntaje}%; background: ${color}"></div></div>
+              <div class="puntos">
+                ${Array.from({length: e.total}, (_, i) => {
+                  const correcta = e.detalles[i]?.esCorrecta;
+                  return `<span class="pto" style="background: ${correcta ? '#1A6B2F' : '#C00000'}; color: #fff;">${correcta ? '✓' : '✗'}</span>`;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+      }
+      document.getElementById("contenedor-alumnos").innerHTML = html;
+    });
+
+    // GESTIÓN PREGUNTAS
+    function actualizarContadorPreguntas() {
+      refPreguntas.once("value", snap => {
+        const cnt = Object.keys(snap.val() || {}).length;
+        const el = document.getElementById("contador-preg");
+        el.textContent = `${cnt} / 60 preguntas`;
+        el.className = cnt >= 10 ? "contador-preg listo" : "contador-preg";
+      });
+    }
+
+    document.getElementById("btn-agregar-preg").addEventListener("click", () => {
+      const preg = document.getElementById("txt-preg").value.trim();
+      const opc = [
+        document.getElementById("opt-a").value.trim(),
+        document.getElementById("opt-b").value.trim(),
+        document.getElementById("opt-c").value.trim(),
+        document.getElementById("opt-d").value.trim()
+      ];
+      const corr = parseInt(document.getElementById("sel-correcta").value);
+      const expl = document.getElementById("txt-expl").value.trim();
+
+      if (!preg || opc.some(o => !o) || isNaN(corr)) {
+        alert("Completa todos los campos");
+        return;
+      }
+
+      refPreguntas.once("value", snap => {
+        const pregs = snap.val() || {};
+        if (Object.keys(pregs).length >= 60) {
+          alert("Máximo 60 preguntas permitidas");
+          return;
+        }
+
+        refPreguntas.push({
+          t: preg,
+          o: opc,
+          c: corr,
+          e: expl || "Sin explicación"
+        });
+
+        document.getElementById("txt-preg").value = "";
+        document.getElementById("opt-a").value = "";
+        document.getElementById("opt-b").value = "";
+        document.getElementById("opt-c").value = "";
+        document.getElementById("opt-d").value = "";
+        document.getElementById("sel-correcta").value = "";
+        document.getElementById("txt-expl").value = "";
+
+        actualizarContadorPreguntas();
+        actualizarListaPreguntas();
+      });
+    });
+
+    function actualizarListaPreguntas() {
+      refPreguntas.on("value", snap => {
+        const datos = snap.val() || {};
+        let html = "";
+        Object.entries(datos).forEach(([id, preg]) => {
+          html += `
+            <div class="preg-item">
+              <div class="txt">${preg.t}</div>
+              <button class="btn-borrar" onclick="borrarPregunta('${id}')">Borrar</button>
+            </div>
+          `;
+        });
+        document.getElementById("lista-preguntas").innerHTML = html || '<div class="vacio">Sin preguntas personalizadas</div>';
+      });
+    }
+
+    window.borrarPregunta = function(id) {
+      if (confirm("¿Borrar esta pregunta?")) {
+        refPreguntas.child(id).remove();
+        actualizarContadorPreguntas();
+        actualizarListaPreguntas();
+      }
+    };
+
+    actualizarContadorPreguntas();
+    actualizarListaPreguntas();
+  </script>
+</body>
+</html>
